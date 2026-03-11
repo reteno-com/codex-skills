@@ -2,6 +2,11 @@
 
 Add production skills here.
 
+Current imported skills:
+
+- `reteno-email-editor`
+- `web-funnel-analyzer`
+
 Recommended layout:
 
 - `skills/<skill-name>/SKILL.md`

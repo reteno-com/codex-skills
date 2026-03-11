@@ -1,0 +1,3 @@
+interface:
+  display_name: "Web Funnel Analyzer"
+  short_description: "Analyze onboarding quiz funnels with screenshots"

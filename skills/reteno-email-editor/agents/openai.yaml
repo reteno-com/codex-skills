@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reteno Email Editor"
+  short_description: "Read Reteno email export manifests, then clone or update through MCP with text-only edits in allowed blocks."
+  default_prompt: "Use the Reteno MCP tool get_email_message_export(message_id) to read a message by ID, download the exported html and css artifacts, preserve the original builder HTML and css field, edit only text inside existing esd-block-text and esd-block-button blocks plus subject or preheader when requested, then write back through prepare_email_message_upload and create_email_message or update_email_message using uploadSessionId."

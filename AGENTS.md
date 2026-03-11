@@ -3,6 +3,7 @@
 ## Repo Purpose
 
 This repository hosts Reteno-specific Codex skills for internal agent use.
+Treat the repository as a research preview unless a task explicitly says a skill is production-ready.
 
 ## Working Rules
 

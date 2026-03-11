@@ -11,7 +11,6 @@ This repo is the source of truth for reusable agent skills, templates, and suppo
 ## Structure
 
 - `skills/` - production-ready skills, one skill per directory.
-- `templates/skill-template/` - starter template for creating a new skill.
 - `AGENTS.md` - repo-specific operating rules for agents working in this project.
 
 ## Current Public Candidates
@@ -32,10 +31,9 @@ Each skill should live in its own folder and include:
 
 ## Contributing
 
-1. Copy `templates/skill-template/` into `skills/<skill-name>/`.
-2. Replace placeholders in `SKILL.md`.
-3. Add only the assets and scripts the skill actually needs.
-4. Keep instructions operational and specific to the task the skill solves.
+1. Create `skills/<skill-name>/SKILL.md`.
+2. Add only the assets, scripts, and references the skill actually needs.
+3. Keep instructions operational and specific to the task the skill solves.
 
 ## Status
 

@@ -39,3 +39,4 @@ Each skill should live in its own folder and include:
 
 Initial scaffold created on March 11, 2026.
 Research preview positioning and first imported skills added on March 11, 2026.
+Repository cleanup completed on March 11, 2026.

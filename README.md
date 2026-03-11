@@ -1,8 +1,8 @@
-# codex-skills
+# Reteno Agents for Codex
 
 > Research preview: this repository is an early public-facing workspace for Reteno agent skills. Expect iteration, experiments, and evolving conventions.
 
-Shared repository for Reteno skills used by Codex agents.
+Shared repository for Reteno agents and skills used by Codex.
 
 ## Purpose
 

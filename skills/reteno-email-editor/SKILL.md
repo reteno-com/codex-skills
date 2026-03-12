@@ -1,6 +1,7 @@
 ---
 name: reteno-email-editor
 description: Read Reteno email export manifests and clone or update them through Reteno MCP while preserving Reteno's original verbose builder HTML. Use for MCP-backed Reteno email text editing in this repo.
+version: 0.1.1
 ---
 
 # Reteno Email Editor

@@ -1,6 +1,7 @@
 ---
 name: web-funnel-analyzer
 description: Analyze onboarding funnel quizzes by opening a web URL in Playwright, automatically walking quiz steps, capturing screen-by-screen screenshots, extracting/transcribing text, and generating a funnel summary for email creation. Use when asked to analyze onboarding funnel flow, walk a quiz, capture funnel screens/text, or convert a web funnel into an email brief.
+version: 0.1.1
 ---
 
 # Web Funnel Analyzer

@@ -4,6 +4,8 @@
 
 Shared repository for Reteno agents and skills used by Codex.
 
+Current version: `0.1.1`
+
 ## Purpose
 
 This repo is the source of truth for reusable agent skills, templates, and supporting documentation.
@@ -11,6 +13,7 @@ This repo is the source of truth for reusable agent skills, templates, and suppo
 ## Structure
 
 - `skills/` - production-ready skills, one skill per directory.
+- `VERSION` - canonical repository version shared by all in-repo skills.
 - `AGENTS.md` - repo-specific operating rules for agents working in this project.
 
 ## Current Public Candidates
@@ -29,11 +32,20 @@ Each skill should live in its own folder and include:
 - `scripts/` - optional automation scripts used by the skill.
 - `references/` - optional narrow supporting docs.
 
+Each in-repo skill must also declare a `version` field in `SKILL.md` frontmatter, and that value must match the root `VERSION` file.
+
 ## Contributing
 
 1. Create `skills/<skill-name>/SKILL.md`.
 2. Add only the assets, scripts, and references the skill actually needs.
-3. Keep instructions operational and specific to the task the skill solves.
+3. Set the skill `version` to match the root `VERSION`.
+4. Keep instructions operational and specific to the task the skill solves.
+
+Validate shared versioning with:
+
+```bash
+python3 scripts/check_versions.py
+```
 
 ## Status
 

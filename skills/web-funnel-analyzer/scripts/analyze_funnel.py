@@ -29,10 +29,17 @@ except Exception:  # pragma: no cover
 OUTPUT_BASE = Path.cwd() / "output" / "funnels"
 STOP_AT_DEFAULT = "email_capture"
 STEP_MARKER_RE = re.compile(r"\b(\d{1,3})\s+of\s+(\d{1,3})\b", re.IGNORECASE)
+STEP_MARKER_SLASH_RE = re.compile(r"(?<!\d)(\d{1,3})\s*/\s*(\d{1,3})(?!\d)")
 SAFE_FORWARD_RE = re.compile(r"next|continue|get my plan|start|submit|confirm", re.IGNORECASE)
 BLOCKED_LABEL_RE = re.compile(r"back|privacy|terms|contact|help|cookie", re.IGNORECASE)
 DETOUR_OPTION_RE = re.compile(
     r"add photo|upload|camera|gallery|take photo|choose photo|detect .*photo|identify my dog'?s breed",
+    re.IGNORECASE,
+)
+PROCESSING_RE = re.compile(
+    r"connecting to database|analyzing|analysing|recalibrating|cross-checking|estimating optimal|"
+    r"generating your action plan|processing your data|creating your personalized|creating personal program|"
+    r"just a moment|loading",
     re.IGNORECASE,
 )
 STOPWORDS = {
@@ -143,7 +150,18 @@ def safe_inner_text(locator, timeout: int = 500) -> str:
 
 def detect_step_marker(page: Page) -> tuple[str, int | None, int | None]:
     body_text = safe_inner_text(page.locator("body"))
-    match = STEP_MARKER_RE.search(body_text)
+    candidate_texts = [body_text]
+    try:
+        candidate_texts.append(extract_dom_text(page))
+    except Exception:
+        pass
+    match = None
+    for text in candidate_texts:
+        match = STEP_MARKER_RE.search(text)
+        if not match:
+            match = STEP_MARKER_SLASH_RE.search(text)
+        if match:
+            break
     if not match:
         return "", None, None
     index = int(match.group(1))
@@ -154,20 +172,35 @@ def detect_step_marker(page: Page) -> tuple[str, int | None, int | None]:
 def detect_title(page: Page) -> str:
     script = """
 () => {
-  const nodes = Array.from(document.querySelectorAll('main h1, main h2, main p, h1, h2, p'));
+  const root = document.querySelector('main') || document.body;
+  const isVisible = (node) => {
+    const style = window.getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    return rect.width > 10 && rect.height > 10;
+  };
+  const nodes = Array.from(root.querySelectorAll('h1, h2, h3, p, div, span, label, button'));
   const cleaned = nodes
+    .filter((node) => isVisible(node))
     .map((node) => (node.innerText || '').trim())
     .map((text) => text.replace(/\\s+/g, ' '))
     .filter((text) => text.length > 5)
     .filter((text) => !/^back$/i.test(text))
     .filter((text) => !/^\\d+\\s+of\\s+\\d+$/i.test(text))
+    .filter((text) => !/^\\d+\\s*\\/\\s*\\d+$/i.test(text))
     .filter((text) => !/^©/i.test(text))
     .filter((text) => !/disclaimer/i.test(text))
     .filter((text) => !/all rights reserved/i.test(text));
-  const question = cleaned.find((text) => /\\?$/.test(text));
+  const ignored = /terms of use|privacy policy|need help|skip/i;
+  const informative = cleaned.filter((text) => !/^luvly$/i.test(text));
+  const relevant = informative.filter((text) => !ignored.test(text));
+  const question = relevant.find((text) => /\\?$/.test(text));
   if (question) return question;
-  const longLine = cleaned.find((text) => text.length >= 20);
-  return longLine || '';
+  const longLine = relevant.find((text) => text.length >= 20 && text.length <= 180);
+  if (longLine) return longLine;
+  const shortPrompt = relevant.find((text) => text.length >= 8);
+  if (shortPrompt) return shortPrompt;
+  return '';
 }
 """
     try:
@@ -291,8 +324,6 @@ def merge_text(dom_text: str, ocr_text: str) -> str:
 def looks_like_processing_screen(text: str, marker: str, title: str = "") -> bool:
     lowered = text.lower()
     title_lower = title.lower().strip()
-    if marker:
-        return False
 
     # Prefer explicit loader titles to avoid false positives from hidden/stale DOM text.
     title_keywords = (
@@ -306,30 +337,61 @@ def looks_like_processing_screen(text: str, marker: str, title: str = "") -> boo
         return True
     if "?" in title_lower:
         return False
+    if PROCESSING_RE.search(lowered):
+        return True
+    if marker:
+        return False
 
-    return (
-        "process your data" in lowered
-        or "analysing your answers" in lowered
-        or "calculating your weight loss forecast" in lowered
-        or "creating personal program" in lowered
-        or "creating your personalized" in lowered
-    )
+    return False
+
+
+def wait_for_screen_change(
+    page: Page,
+    initial_signature: str,
+    timeout_ms: int = 12000,
+    poll_ms: int = 400,
+) -> bool:
+    deadline = time.time() + (timeout_ms / 1000)
+    while time.time() < deadline:
+        page.wait_for_timeout(poll_ms)
+        current_signature = f"{page.url}|{detect_step_marker(page)[0]}|{detect_title(page)}|{extract_dom_text(page)[:180]}"
+        if current_signature != initial_signature:
+            return True
+    return False
 
 
 def looks_like_email_capture(page: Page) -> bool:
+    try:
+        if "email" in (urlparse(page.url).path or "").lower():
+            return True
+    except Exception:
+        pass
     selectors = [
         "input[type='email']",
+        "input[type='text']",
         "input[name*='email' i]",
         "input[placeholder*='email' i]",
         "input[aria-label*='email' i]",
     ]
+    has_input = False
     for selector in selectors:
         try:
             if page.locator(selector).count() > 0:
-                return True
+                has_input = True
+                if selector != "input[type='text']":
+                    return True
         except Exception:
             continue
-    return False
+    if not has_input:
+        return False
+    body_text = safe_inner_text(page.locator("body")).lower()
+    email_keywords = (
+        "enter your email",
+        "your email",
+        "get my plan",
+        "email",
+    )
+    return any(keyword in body_text for keyword in email_keywords)
 
 
 def click_if_visible(page: Page, selector: str) -> bool:
@@ -717,6 +779,62 @@ def click_first_option(page: Page) -> bool:
     return False
 
 
+def click_image_option(page: Page) -> bool:
+    script = """
+() => {
+  const isVisible = (node) => {
+    const style = window.getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    return rect.width >= 20 && rect.height >= 20;
+  };
+  const images = Array.from(document.querySelectorAll('main img, img'));
+  const scored = images
+    .map((img, index) => {
+      const rect = img.getBoundingClientRect();
+      const style = window.getComputedStyle(img);
+      const src = (img.getAttribute('src') || '').toLowerCase();
+      const alt = (img.getAttribute('alt') || '').trim().toLowerCase();
+      const score =
+        (style.cursor === 'pointer' ? 4 : 0) +
+        (rect.y > 140 && rect.y < window.innerHeight - 120 ? 3 : 0) +
+        (rect.width <= 120 && rect.height <= 140 ? 2 : 0) +
+        (alt ? 1 : 0);
+      return {
+        index,
+        src,
+        alt,
+        score,
+        x: rect.x,
+        y: rect.y,
+        visible: isVisible(img),
+      };
+    })
+    .filter((item) => item.visible)
+    .filter((item) => !item.src.includes('bat.bing.com'))
+    .filter((item) => !item.src.includes('site-assets.plasmic.app'))
+    .filter((item) => !item.src.startsWith('data:image/svg+xml'))
+    .filter((item) => item.y > 120 && item.y < window.innerHeight - 120)
+    .sort((a, b) => b.score - a.score || a.y - b.y || a.x - b.x);
+  return scored.length ? scored[0].index : -1;
+}
+"""
+    try:
+        target_index = page.evaluate(script)
+    except Exception:
+        return False
+    if target_index is None or target_index < 0:
+        return False
+    locator = page.locator("main img, img").nth(target_index)
+    try:
+        if locator.is_visible():
+            locator.click(timeout=1200)
+            return True
+    except Exception:
+        return False
+    return False
+
+
 def click_safe_forward_button(page: Page) -> bool:
     buttons = page.locator("button")
     try:
@@ -904,7 +1022,12 @@ def main() -> int:
                 if click_safe_forward_button(page) or click_if_visible(page, "[type='submit']"):
                     page.wait_for_timeout(800)
                     continue
+                processing_signature = (
+                    f"{page.url}|{detect_step_marker(page)[0]}|{detect_title(page)}|{extract_dom_text(page)[:180]}"
+                )
                 if looks_like_processing_screen(extract_dom_text(page), marker, detect_title(page)):
+                    if wait_for_screen_change(page, processing_signature, timeout_ms=12000):
+                        continue
                     page.wait_for_timeout(1500)
                     continue
 
@@ -961,7 +1084,8 @@ def main() -> int:
             if looks_like_processing_screen(merged_text, marker, title):
                 record.action_taken = "wait_processing"
                 steps.append(record)
-                page.wait_for_timeout(6500)
+                processing_signature = f"{page.url}|{marker}|{title}|{merged_text[:180]}"
+                wait_for_screen_change(page, processing_signature, timeout_ms=20000)
                 continue
 
             action = "none"
@@ -983,6 +1107,12 @@ def main() -> int:
                     action = "click_first_option_then_forward"
                 else:
                     action = "click_first_option"
+            elif click_image_option(page):
+                page.wait_for_timeout(350)
+                if click_safe_forward_button(page):
+                    action = "click_image_option_then_forward"
+                else:
+                    action = "click_image_option"
             else:
                 had_numeric = fill_numeric_fields(page, warnings)
                 clicked_forward = click_safe_forward_button(page)

@@ -1,5 +1,9 @@
 # Reteno Agents for Codex
 
+> Outdated repository: use the maintained Reteno AI plugin repository instead: https://github.com/reteno-com/ai-plugin
+>
+> This repository is no longer the recommended entry point for users.
+
 > Research preview: this repository is an early public-facing workspace for Reteno agent skills. Expect iteration, experiments, and evolving conventions.
 
 Shared repository for Reteno agents and skills used by Codex.
@@ -8,7 +12,8 @@ Current version: `0.1.1`
 
 ## Purpose
 
-This repo is the source of truth for reusable agent skills, templates, and supporting documentation.
+This repo is outdated and retained for historical/reference purposes only.
+For current Reteno AI plugin work, use https://github.com/reteno-com/ai-plugin.
 
 ## Structure
 

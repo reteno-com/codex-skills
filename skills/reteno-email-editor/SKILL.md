@@ -6,6 +6,8 @@ version: 0.1.1
 
 # Reteno Email Editor
 
+> Outdated skill location: prefer the maintained Reteno AI plugin repository at https://github.com/reteno-com/ai-plugin
+
 ## Overview
 
 Use explicit `read`, `clone`, and `update` modes:

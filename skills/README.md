@@ -1,5 +1,7 @@
 # Skills Directory
 
+> Outdated repository: use the maintained Reteno AI plugin repository instead: https://github.com/reteno-com/ai-plugin
+
 Add production skills here.
 
 All skills in this repository share the root repo version from `../VERSION`.

@@ -6,6 +6,8 @@ version: 0.1.1
 
 # Web Funnel Analyzer
 
+> Outdated skill location: prefer the maintained Reteno AI plugin repository at https://github.com/reteno-com/ai-plugin
+
 ## Overview
 
 Run a deterministic funnel capture workflow for onboarding quiz web apps. Save each quiz step as an image, save per-step text content, and write a final funnel summary usable for email writing.
